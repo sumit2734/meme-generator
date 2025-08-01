@@ -3,29 +3,51 @@ import os
 
 def generate_meme(image_path, top_text, bottom_text, output_path):
     img = Image.open(image_path)
+
+    # Convert to RGB if image has transparency (RGBA)
+    if img.mode == 'RGBA':
+        img = img.convert('RGB')
+
     draw = ImageDraw.Draw(img)
-    width, height = img.size
 
-    # Load a font
-    font_path = "arial.ttf"  # You must have this font or use a different one
-    font_size = int(height / 10)
-    font = ImageFont.truetype(font_path, font_size)
+    # Load font with dynamic size based on image height
+    try:
+        font_size = int(img.height / 10)
+        font = ImageFont.truetype("arial.ttf", size=font_size)
+    except IOError:
+        print("⚠️ Arial not found. Using default font.")
+        font = ImageFont.load_default()
 
-    # Outline text
-    def draw_text_with_outline(text, y_position):
-        text_width, text_height = draw.textsize(text, font=font)
-        x = (width - text_width) / 2
-        outline_range = 2
-        for ox in range(-outline_range, outline_range + 1):
-            for oy in range(-outline_range, outline_range + 1):
-                draw.text((x + ox, y_position + oy), text, font=font, fill="black")
-        draw.text((x, y_position), text, font=font, fill="white")
+    def draw_text_with_outline(text, y):
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        x = (img.width - text_width) / 2
 
-    draw_text_with_outline(top_text, 10)
-    draw_text_with_outline(bottom_text, height - font_size - 20)
+        # Outline
+        for dx in [-2, 0, 2]:
+            for dy in [-2, 0, 2]:
+                draw.text((x + dx, y + dy), text, font=font, fill='black')
+
+        draw.text((x, y), text, font=font, fill='white')
+
+    draw_text_with_outline(top_text.upper(), 10)
+    draw_text_with_outline(bottom_text.upper(), img.height - font_size - 10)
 
     img.save(output_path)
-    print(f"Meme saved to {output_path}")
+    print(f"✅ Meme saved as: {output_path}")
 
-# Example usage
-generate_meme("sample.jpg", "TOP TEXT", "BOTTOM TEXT", "output_meme.jpg")
+# 🖼 Auto-detect first image in folder
+image_file = next((f for f in os.listdir('.') if f.lower().endswith(('.png', '.jpg', '.jpeg'))), None)
+
+if not image_file:
+    raise FileNotFoundError("❌ No image file found in this folder. Please add a .jpg or .png file.")
+
+# 🧠 Set your meme text here
+TOP_TEXT = "When code finally runs"
+BOTTOM_TEXT = "Without any errors 😎"
+
+# 🔥 Run meme generator
+generate_meme(image_file, TOP_TEXT, BOTTOM_TEXT, "output_meme.jpg")
+
+
+
